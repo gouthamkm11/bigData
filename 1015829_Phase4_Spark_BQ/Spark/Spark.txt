@@ -1,0 +1,63 @@
+import org.apache.spark.sql._
+import org.apache.spark.sql.types._
+
+val loadRDD = sc.textFile("file:/home/rohan/Desktop/MTA_Performance_TBTA.csv")
+val header = loadRDD.first
+val noheaders = loadRDD.filter(_ != header)
+
+val schema = StructType(Array(StructField("INDICATOR_NAME",StringType,true),StructField("PERIOD_YEAR",IntegerType,true),StructField("MONTHLY_TARGET",DoubleType,true),StructField("MONTHLY_ACTUAL",DoubleType,true)))
+
+
+val nyctransit = noheaders.map( rec => Row(rec.split(",")(3),rec.split(",")(10).toInt,rec.split(",")(14).toDouble,rec.split(",")(15).toDouble))
+
+val nyctransitDF = spark.createDataFrame(nyctransit, schema)
+
+nyctransitDF.registerTempTable("nyctransit")
+
+nyctransitDF.printSchema()
+
+nyctransitDF.filter($"INDICATOR_NAME".rlike("Total Traffic")).groupBy($"PERIOD_YEAR").agg(sum("MONTHLY_ACTUAL").divide(12).alias("AVG_ACT")).show()
+
+nyctransitDF.filter($"INDICATOR_NAME".rlike("Total Traffic")).groupBy($"PERIOD_YEAR").agg(sum("MONTHLY_TARGET").divide(12).alias("AVG_TGT")).show()
+
+
+nyctransitDF.filter($"INDICATOR_NAME".rlike("Total Traffic")).groupBy($"PERIOD_YEAR").sum("MONTHLY_TARGET","MONTHLY_ACTUAL").show()
+nyctransitDF.filter($"INDICATOR_NAME".rlike("Total Traffic")).groupBy($"PERIOD_YEAR").sum("MONTHLY_TARGET","MONTHLY_ACTUAL").divide(12).alias("avg_sum").show()
+
+//nyctransitDF.filter($"INDICATOR_NAME" == "Total Traffic").show()
+//nyctransitDF.groupBy("PERIOD_YEAR").count().show()
+//nyctransitDF.filter(nyctransitDF("INDICATOR_NAME"== "Total Traffic") ).show()
+
+//val re = nyctransitDF.filter($"INDICATOR_NAME".rlike("Total Traffic")).groupBy($"PERIOD_YEAR").sum("MONTHLY_TARGET","MONTHLY_ACTUAL").show()
+
+
+INDICATOR_SEQ Integer
+PARENT_SEQ
+AGENCY_NAME
+INDICATOR_NAME
+DESCRIPTION
+CATEGORY
+FREQUENCY
+DESIRED_CHANGE
+INDICATOR_UNIT
+DECIMAL_PLACES
+PERIOD_YEAR
+PERIOD_MONTH
+YTD_TARGET
+YTD_ACTUAL
+MONTHLY_TARGET
+MONTHLY_ACTUAL
+
+
+INDICATOR_NAME StringType
+PERIOD_YEAR  IntegerType
+MONTHLY_TARGET FloatType
+MONTHLY_ACTUAL FloatType
+
+create table final(indicator string,montlyact int,montly target) row format delimited fields terminated by ',';
+
+
+insert overwrite table final
+select indicatorname,monthlyact,montlytargt from firsttable group by year;
+
+
